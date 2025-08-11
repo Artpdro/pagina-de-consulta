@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Solicitação de abertura de feriados</title>
+  <style>
+    :root{
+      --blue:#215D98;
+      --light:#ffffff;
+      --muted:#666;
+      --accent:#215D98;
+      --card-bg:#ffffff;
+      --max-width:1100px;
+    }
+    *{box-sizing:border-box;font-family: "Segoe UI", Roboto, Arial, sans-serif}
+    body{margin:0;background:#f6f6f6;color:#111}
+
+    .app{min-height:100vh;display:flex;align-items:stretch}
+    .sidebar{
+      width:220px;background:var(--blue);color:var(--light);padding:28px 16px;display:flex;
+      flex-direction:column;gap:18px;align-items:flex-start;
+    }
+    .logo img{width:160px; display:block;}
+    .nav-btn{display:inline-block;padding:8px 12px;background:transparent;color:var(--light);
+      border:2px solid rgba(255,255,255,0.15);border-radius:6px;text-decoration:none;font-size:14px;}
+    .nav-btn:hover{background:rgba(255,255,255,0.06)}
+
+    .main{flex:1;padding:32px 56px;background:linear-gradient(0deg, rgba(255,255,255,0.0), rgba(255,255,255,1));}
+    .top-right{display:flex;justify-content:flex-end;margin-bottom:8px;}
+    .voltar{ text-decoration:none;color:var(--blue);font-weight:700;border:2px solid var(--blue);
+      padding:8px 18px;border-radius:6px;background:#fff;}
+
+    .card{background:var(--card-bg);max-width:var(--max-width);margin-top:14px;padding:36px 48px;
+      border-radius:6px;box-shadow:0 6px 18px rgba(20,20,20,0.06);}
+
+    h1{margin:6px 0 22px 0;font-size:30px;font-weight:600;color:#111}
+
+    form .row{display:flex;gap:18px;align-items:center;margin-bottom:18px;flex-wrap:wrap}
+    label{min-width:140px;font-size:14px;color:var(--muted)}
+    input[type="text"], input[type="date"]{
+      flex:1 1 420px;padding:10px 12px;border:1px solid #cfcfcf;border-radius:6px;font-size:14px;
+    }
+    .help{font-size:13px;color:#888;margin-top:6px}
+    .error{color:#b00020;font-size:13px;margin-left:140px}
+
+    .actions{display:flex;gap:12px;margin-top:8px}
+    button{padding:10px 14px;border-radius:8px;border:0;cursor:pointer;font-weight:600}
+    .btn-send{ background:var(--accent); color:white;}
+
+    @media (max-width:800px){
+      .sidebar{ display:none; }
+      .main{ padding:18px; }
+      label{ min-width:110px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="logo">
+        <!-- coloque aqui o SVG que você anexou renomeado para 'sindnorte.svg' -->
+        <img src="sindnorte.svg" alt="Sindnorte">
+      </div>
+
+      <a class="nav-btn" href="abertura.html">Solicitação de abertura</a>
+      <a class="nav-btn" href="consulta_repis.html">Consulta REPIS</a>
+    </aside>
+
+    <main class="main">
+      <div class="top-right">
+        <a class="voltar" href="index.html">VOLTAR</a>
+      </div>
+
+      <div class="card">
+        <h1>Solicitação de abertura de feriados</h1>
+
+        <form id="formSolic" onsubmit="return false;">
+          <div class="row">
+            <label for="cnpj">CNPJ</label>
+            <input id="cnpj" type="text" inputmode="numeric" placeholder="00.000.000/0000-00" maxlength="18" />
+          </div>
+          <div id="cnpjError" class="error" style="display:none">CNPJ inválido</div>
+
+          <div class="row">
+            <label for="dataFeriado">Data do feriado:</label>
+            <input id="dataFeriado" type="date" />
+          </div>
+          <div class="help" style="margin-left:140px">Você pode escolher a data pelo calendário ou digitar manualmente (formato yyyy-mm-dd).</div>
+
+          <div class="actions">
+            <button class="btn-send" id="btnEnviar" type="button">Enviar solicitação</button>
+          </div>
+        </form>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // máscara/formatador CNPJ (enquanto digita)
+    const cnpjInput = document.getElementById('cnpj');
+    cnpjInput.addEventListener('input', (e) => {
+      const value = e.target.value.replace(/\D/g,'').slice(0,14);
+      let formatted = value;
+      if(value.length > 12){
+        formatted = value.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{0,2}).*/, '$1.$2.$3/$4-$5');
+      } else if(value.length > 8){
+        formatted = value.replace(/^(\d{2})(\d{3})(\d{3})(\d{0,4}).*/, '$1.$2.$3/$4');
+      } else if(value.length > 5){
+        formatted = value.replace(/^(\d{2})(\d{3})(\d{0,3}).*/, '$1.$2.$3');
+      } else if(value.length > 2){
+        formatted = value.replace(/^(\d{2})(\d{0,3}).*/, '$1.$2');
+      }
+      e.target.value = formatted;
+      toggleCNPJError(!validateCNPJ(value));
+    });
+
+    function toggleCNPJError(show){
+      const el = document.getElementById('cnpjError');
+      el.style.display = show ? 'block' : 'none';
+    }
+
+    // validação CNPJ (algoritmo)
+    function validateCNPJ(cnpj) {
+      if(!cnpj) return false;
+      const s = cnpj.replace(/\D/g,'');
+      if (s.length !== 14) return false;
+      if (/^(\d)\1{13}$/.test(s)) return false;
+
+      const calc = (t) => {
+        let sum = 0;
+        let pos = t - 7;
+        for (let i = t; i >= 1; i--) {
+          sum += parseInt(s[t - i]) * pos--;
+          if (pos < 2) pos = 9;
+        }
+        const res = sum % 11;
+        return (res < 2) ? 0 : 11 - res;
+      }
+
+      const dig1 = calc(12);
+      if (dig1 !== parseInt(s[12])) return false;
+      const dig2 = calc(13);
+      if (dig2 !== parseInt(s[13])) return false;
+      return true;
+    }
+
+    // armazenamento local (localStorage) ao enviar
+    const STORAGE_KEY = 'solicitacoesFeriado_v1';
+
+    function loadSaved(){
+      const raw = localStorage.getItem(STORAGE_KEY);
+      try{ return raw ? JSON.parse(raw) : []; } catch(e){ return []; }
+    }
+    function saveAll(arr){ localStorage.setItem(STORAGE_KEY, JSON.stringify(arr)); }
+
+    document.getElementById('btnEnviar').addEventListener('click', () => {
+      const rawCnpj = document.getElementById('cnpj').value.replace(/\D/g,'');
+      const dataFeriado = document.getElementById('dataFeriado').value || '';
+
+      if(!validateCNPJ(rawCnpj)){
+        toggleCNPJError(true);
+        alert('CNPJ inválido. Verifique antes de enviar.');
+        return;
+      }
+      if(!dataFeriado){
+        alert('Por favor selecione a data do feriado.');
+        return;
+      }
+
+      const formattedCnpj = rawCnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
+      const entry = { cnpj: formattedCnpj, data: dataFeriado, sentAt: new Date().toISOString() };
+
+      const list = loadSaved();
+      list.unshift(entry);
+      saveAll(list);
+
+      alert('Solicitação enviada com sucesso!');
+
+      // opcional: limpar campos
+      // document.getElementById('cnpj').value = '';
+      // document.getElementById('dataFeriado').value = '';
+    });
+
+    // OBS: se quiser enviar para um servidor real, substitua o armazenamento local por fetch():
+    /*
+    fetch('/api/solicitacoes', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(entry)
+    }).then(...)
+    */
+  </script>
+</body>
+</html>
